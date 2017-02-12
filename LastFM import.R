@@ -10,12 +10,12 @@ uniq.artist <- unique(Lastfm$artname)
 ####################################################################################
 ####################################################################################
 # Save R environment
-save.image("~/Documents/NYU/APSTA 2017/EDSP/Lastfm_data.RData")
+save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
 
 ####################################################################################
 ####################################################################################
 # Load R environment
-load("~/Documents/NYU/APSTA 2017/EDSP_SG/Lastfm_data.RData")
+load("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
 
 # Keep only rows (unique user-artist combination) with > 50 plays.  Removes 24.3% of data
 Lastfm <- Lastfm[which(Lastfm$plays > 50),]
