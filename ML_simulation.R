@@ -1,9 +1,11 @@
+library(class)
+library(recommenderlab)
 # This R script is intended to test music suggestion methods using only a small subset of the
 # full dataset.
 ####################################################################################
 ####################################################################################
 # Save LastFM simulation data
-save.image("~/Documents/NYU/APSTA 2017/EDSP/Lastfm_sim_data.RData")
+save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_sim_data.RData")
 
 ####################################################################################
 ####################################################################################
@@ -32,18 +34,44 @@ samp.users <- User.plays.20_50$User[sample(c(1:length(User.plays.20_50$User)), N
 samp.dat <- Lastfm[which(Lastfm$usersha1 %in% samp.users),]
 
 # Create utility matrix
-samp.Utility <- matrix(data = NA, nrow = length(unique(samp.dat$artname)), ncol = length(
-  unique(samp.dat$usersha1)))
-colnames(samp.Utility) <- unique(samp.dat$usersha1)
-rownames(samp.Utility) <- unique(samp.dat$artname)
+samp.Utility <- matrix(data = NA, nrow = length(unique(samp.dat$usersha1)),
+                       ncol = length(unique(samp.dat$artname)))
+rownames(samp.Utility) <- unique(samp.dat$usersha1)
+colnames(samp.Utility) <- unique(samp.dat$artname)
 
-# fill in utility matrix
-for (c in 1:ncol(samp.Utility)) {
-  for (r in 1:nrow(samp.Utility)) {
+# fill in utility matrix for training
+for (r in 1:nrow(samp.Utility)) {
+  for (c in 1:ncol(samp.Utility)) {
     samp.Utility[r,c] <- max(samp.dat$plays[
-      which(samp.dat$artname == rownames(samp.Utility)[r] &
-              samp.dat$usersha1 == colnames(samp.Utility)[c])
+      which(samp.dat$artname == colnames(samp.Utility)[c] &
+              samp.dat$usersha1 == rownames(samp.Utility)[r])
     ], 0)
   }
 }
+rm(r,c)
+samp.Utility[which(samp.Utility[,] == 0)] <- NA
+
+# Create a utility matrix of the sampled users with binary values: 0 = user has never
+# listened to artist, 1 = user has listened to artist.
+samp.Utility_bin <- samp.Utility
+samp.Utility_bin[!is.na(samp.Utility_bin)] <- 1
+samp.Utility_bin[is.na(samp.Utility_bin)] <- 0
+
+# Create UBCF recommendation model using samp.Utility_bin as training data.
+r_test <- sample(c(1:N_samp), 1)
+rownames(samp.Utility_bin)[r_test]
+affinity.mat <- as(samp.Utility_bin[c((1:(r_test-1)),((r_test+1):N_samp)),],"realRatingMatrix")
+Rec.model_bin <- Recommender(data = affinity.mat, method = "UBCF")
+recommended.items <- predict(Rec.model_bin, as(samp.Utility_bin[r_test,],"realRatingMatrix"), 
+                             n = 5)
+as(recommended.items,"list")
+
+
+######################################
+# select random user for testing
+test.User <- User.plays.20_50$User[which(!(User.plays.20_50$User %in% samp.users))][
+  sample(c(1:length(User.plays.20_50$User)-N_samp),1 , replace = F)]
+test.User
+View(Lastfm[which(Lastfm$usersha1 == test.User),])
+
 
