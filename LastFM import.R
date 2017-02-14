@@ -16,6 +16,7 @@ save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
 ####################################################################################
 # Load R environment
 load("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
+load("largedata/Lastfm_data.RData")
 
 # Keep only rows (unique user-artist combination) with > 50 plays.  Removes 24.3% of data
 Lastfm <- Lastfm[which(Lastfm$plays > 50),]

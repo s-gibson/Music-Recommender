@@ -2,4 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+<<<<<<< HEAD
 /large data
+=======
+largedata/
+>>>>>>> 3032f46d9c792d3643acdff2977d8a1d1ee4fa7b
