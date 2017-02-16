@@ -147,4 +147,3 @@ User.plays
 User.recs_perc
 ```
 
-
