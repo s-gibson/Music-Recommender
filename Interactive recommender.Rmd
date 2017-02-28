@@ -1,0 +1,105 @@
+---
+title: "Interactive recommender"
+output: html_notebook
+---
+
+One goal (if not the only goal) of a music recommendation engine is to create a program that allows people to input their musical preferences, and through a recommendation algorithm, output a set of music that said person might like.  My recommendation program "Music Recommendation Simulation_v1" (https://github.com/edsp2017/edsp17proj-s-gibson/blob/master/Music%20Recommendation%20Simulation_v1.Rmd) is a simulation that recommends music to users of last.fm's music streaming platform. It is somewhat difficult to evaluate how well the recommendation simulation I have created works, because much of the music that is listened to by users in the dataset and therefore much of the music recommended by the recommender is music that I am not familiar with.  So it is hard for me to evaluate how "similar" recommendations are to the listening habits of the sample users in the dataset.
+
+This program can be thought of as a "beta test" of sorts.  My goal is to create a survey document that will allow survey-takers to input their musical preferences, from which I can create a recommendation list.
+
+First, let's load appropriate packages and data, and also create code for saving data.
+```{r}
+library(recommenderlab)
+```
+
+```{r}
+load("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
+```
+
+```{r}
+save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Interactive.RData")
+```
+
+As done in "Music Recommendation Simulation_v1.Rmd", let's consider only users who have listend to songs by no fewer than 20 unique artists.
+```{r}
+User.plays.20 <- User.plays[which(User.plays$N.artists >= 20),]
+```
+
+Similarly to how we have eliminated users with rather specific musical preference (as inidicated by a low number of unique artists listened to), I think it would be valuable to eliminate artists who have a narrow listener following (as indicated by a low number of unique listeners).  Let's examine the quantiles of Artist.plays$N.users to get a feel the user listening base of many artists.
+```{r}
+quantile(Artist.plays$N.users, seq(0, 1, .1))
+```
+
+As we can see, there are lot of artists who are only listened to by a handful of users.  Only about 1 in 5 artists are listened to by more than a dozen different users (out of more than 300 thousand users).  For the sake of recommending music that isn't super-specific, let's only consider artists who are listened to by no fewer than 10 unique users.
+```{r}
+Artist.plays.10 <- Artist.plays[which(Artist.plays$N.users >= 12),]
+```
+This cuts down on the size of the recommendable music "library" from more than 200,000 unique artists to fewer than 50,000 unique artists.
+
+Similarly to to "Music Recommendation Simulation_v1.Rmd", we must create a data sample from which to train the recommender.  One modification to this sample is that it should include users who are randomly sampled from "User.plays.20" AND only artists who appear in "Artist.plays.10".
+```{r}
+set.seed(2202017)
+N_samp <- 1000
+samp.users <- User.plays.20$User[sample(c(1:length(User.plays.20$User)), N_samp , replace = F)]
+samp.dat <- Lastfm[which(Lastfm$usersha1 %in% samp.users & Lastfm$artname %in% unique(Artist.plays.10$Artist)),]
+```
+
+As in "Music Recommendation Simulation_v1", we must create a utility matrix of users' (and the input user's) musical preferences.
+```{r}
+print(paste("Number of unique artists in a sample of", N_samp,"users:", 
+        length(unique(samp.dat$artname))))
+samp.Utility <- matrix(data = NA, nrow = length(unique(samp.dat$usersha1)),
+                       ncol = length(unique(samp.dat$artname)))
+rownames(samp.Utility) <- unique(samp.dat$usersha1)
+colnames(samp.Utility) <- unique(samp.dat$artname)
+
+# fill in utility matrix for training.
+for (i in 1:nrow(samp.dat)) {
+  samp.Utility[which(rownames(samp.Utility) == samp.dat$usersha1[i]), which(colnames(samp.Utility) == samp.dat$artname[i])] <- samp.dat$plays[i]
+}
+rm(i)
+```
+
+The code below exports a list of unique artists in "samp.dat" to an Excel file.  I had to do some manipuation of the list in order to create a spreadsheet which allows users to type out their favoirte artists and how many times they might "play" said artist in a theoretical replication of last.fm playcount data.
+```{r}
+write.csv(unique(samp.dat$artname), file = "~/Documents/NYU/APSTA 2017/EDSP_v2/Interactive/input_master.csv")
+```
+
+The code below reads back in a completed version of someones "musical preference" spreadsheet, which I will use as the test set for the recommender.  I have asked people to identify their sheet using the format "input_ABC", where ABC is their initials.  In the example below my name is Stewart Alexander Gibson, thus my input musical preference spreadsheet is titled "input_SAG.csv".
+```{r}
+id <- "SAG"
+file.name <- paste("~/Documents/NYU/APSTA 2017/EDSP_v2/Interactive/input_", id,".csv", sep = "")
+input.dat <- read.csv(file.name)[,c(1,2)]
+```
+
+We now must turn "input.dat" into a utility matrix (of the same dimensions & colnames as "samp.Utility") for the input user.  This matrix will be used as the test data for the recommendation function.
+```{r}
+Test.Utility <- matrix(data = NA, nrow = 1,
+                       ncol = length(unique(samp.dat$artname)))
+colnames(Test.Utility) <- colnames(samp.Utility)
+
+# Fill in Test.Utility matrix
+rownames(Test.Utility) <- id
+  for (i in 1:nrow(input.dat)) {
+    Test.Utility[which(colnames(Test.Utility) == input.dat$Artist[i])] <- input.dat$Count[i]
+  }
+rm(i)
+```
+
+
+Convert the test and train utility matrices to the form "realRatingMatrix", run recommendation model.  The number of recommendations that are in the output can be modified by setting "N_recs".
+```{r}
+Train.Affinity <- as(samp.Utility,"realRatingMatrix")
+Test.Affinity <- as(Test.Utility, "realRatingMatrix")
+Rec.model <- Recommender(data = Train.Affinity, method = "UBCF", param=list(normalize = "Z-score",method="Cosine",nn=10))
+```
+
+```{r}
+N_recs <- 30
+recommended.items <- predict(Rec.model, Test.Affinity, n = N_recs)
+User.playlist <- input.dat 
+User.recs <- as(recommended.items,"list")
+User.playlist
+data.frame(rnk = c(1:N_recs), User.recs$SAG)
+```
+

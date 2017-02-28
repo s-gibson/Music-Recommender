@@ -141,9 +141,9 @@ Rec.model_perc <- Recommender(data = Train.Affinity, method = "UBCF")
 
 N_recs <- 20
 recommended.items_perc <- predict(Rec.model_perc, Test.Affinity_perc, n = N_recs)
-User.plays <- Lastfm[which(Lastfm$usersha1 == rownames(Test.Utility)),][,c(3:4)] 
+User.playlist <- Lastfm[which(Lastfm$usersha1 == rownames(Test.Utility)),][,c(3:4)] 
 User.recs_perc <- as(recommended.items_perc,"list")
-User.plays
+User.playlist
 User.recs_perc
 ```
 
