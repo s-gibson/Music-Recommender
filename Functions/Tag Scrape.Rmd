@@ -1,0 +1,54 @@
+---
+title: "Tag Scrape"
+output: html_notebook
+---
+
+This script creates a function for scraping information on music artists from the Last.fm API and adds artist info to our initial dataset.  My initial recommendation model recommends artists only based on collaborative filtering, recommending music to a user based on the listening history of other users with similar listening preferences.  However, I would like to also be able to recommend artists based on item similarity.  In order to do this, I will need to extract the "tags" associated with each artist.  Tags are artist classifiers that can more or less be thought of as a genre.
+
+The function's only arguments are "artist" and "api.key".  The output is a list of the tags associated with each artist.  The function relies on the "httr" and "jsonlite" packages.
+
+Let's first load the necessary packages, as well as the Last.fm raw data set
+
+```{r}
+library(httr)
+library(jsonlite)
+```
+
+```{r}
+load("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
+```
+
+Let's specify the function "get.tags"
+```{r}
+get.tags <- function(artist, api.key) {
+  raw <- GET(url = paste("http://ws.audioscrobbler.com/2.0/", "?method=artist.getinfo&artist=", artist, "&api_key=", api.key,"&format=json", sep = ""))
+  char <- fromJSON(rawToChar(raw$content))
+  char$artist$tags$tag[1]
+}
+```
+
+Set API key.
+```{r}
+my.api.key <- "b1824d4815fb7388c8c54df8732f43e8"
+```
+
+Let's see an example of the "get.tags" function, scraping the tags for Marvin Gaye.
+```{r}
+get.tags("marvin gaye", my.api.key)
+```
+
+We can utilize this function to merge the tag of each artist into the data.  You might recall from the previous "Interactive recommender.Rmd" file the subsetting of artists to only include artists who have been played by 10 or more users.  Let's create this subset again, but set the minimum required unique users to be 100.
+```{r}
+Artist.plays.100 <- Artist.plays[which(Artist.plays$N.users >= 100),]
+head(Artist.plays.100)
+```
+
+Now, let's add a 4th column; one that contains a list of the tags associated with each artist using the "get.tags" function.
+```{r}
+Artist.plays.100$tags <- NA
+for (i in 1:nrow(Artist.plays.100)) {
+  Artist.plays.100$tags[i] <- list(get.tags(Artist.plays.100$Artist[i], my.api.key))
+}
+  
+```
+
