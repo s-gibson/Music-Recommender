@@ -43,6 +43,12 @@ Artist.plays.100 <- Artist.plays[which(Artist.plays$N.users >= 100),]
 head(Artist.plays.100)
 ```
 
+We will have to remove some artists whose names are such that their API can't be accessed due to http formatting (i.e. artist "#####" can't be accessed).
+```{r}
+Artist.plays.100 <- Artist.plays.100[which(Artist.plays.100$Artist != "#####"),]
+```
+
+
 Now, let's add a 4th column; one that contains a list of the tags associated with each artist using the "get.tags" function.
 ```{r}
 Artist.plays.100$tags <- NA
