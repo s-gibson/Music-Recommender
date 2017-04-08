@@ -69,46 +69,60 @@ for (i in 1:nrow(samp.dat)) {
 rm(i)
 ```
 
-The code below exports a list of unique artists in "samp.dat" to an Excel file.  I had to do some manipuation of the list in order to create a spreadsheet which allows users to type out their favoirte artists and how many times they might "play" said artist in a theoretical replication of last.fm playcount data.
+The goal of this code is to allow users to "interact" with the recommendation algorithm.  That is, allow users to create a "mock" listening history for themselves, and see which artists the algorithm recommends.  In the code below, users can input artists that they like, and assign a hypothetical play count to each artist (the more users like an artist, the more "plays" they should assign to the artist).  In the code chunk below, store the names of the artists that you like in the object "test.artists" and the playcount associated with each artist in "test.plays".  Keep in mind that the order of "test.artists" should correspond to the order of "test.plays".  In the example, the user listens to Michael Jackson 125 times, The Beatles 80 times, and Kanye West 230 times.
+
+Note that all artist names in the data are lower case.  So "Michael Jackson" needs to be stored as "michael jackson".  Also, the spelling of artists must be exact.  The code will not recognize "micheal jackson" becasuse the "a" and "e" are transposed.  The code is also picky with some formatting details.  For example, "&" vs. "and": "bob marley & the wailers" is recognized, but not "bob marley and the wailers".  Also, the use of commas used before "&" in lists: "crosby, stills & nash" is recognized, but not "crosby, stills, & nash".
 ```{r}
-write.csv(unique(samp.dat$artname), file = "~/Documents/NYU/APSTA 2017/EDSP_v2/Interactive/input_master.csv")
+# example: test.artists <- c("michael jackson", "the beatles", "kanye west")
+#          test.plays <- c(125, 80, 230)
+
+test.artists <- c("outkast", "a tribe called quest", "kanye west", "mos def", "mf doom", "sly & the family stone", "war", "funkadelic", "marvin gaye", "curtis mayfield","bob marley & the wailers", "jimmy cliff", "black uhuru", "roy ayers ubiquity", "john coltrane", "crosby, stills & nash", "grateful dead", "jimi hendrix", "pink floyd", "santana")
+test.plays <- c(90, 80, 65, 60, 80, 75, 85, 80, 50, 45, 85, 50, 45, 55, 35, 30, 100, 95, 45, 50)
 ```
 
-The code below reads back in a completed version of someones "musical preference" spreadsheet, which I will use as the test set for the recommender.  I have asked people to identify their sheet using the format "input_ABC", where ABC is their initials.  In the example below my name is Stewart Alexander Gibson, thus my input musical preference spreadsheet is titled "input_SAG.csv".
+The code below first checks to make sure that number of artist names matches the number of plays.  If they do not match, the user should go back and adjust the previous chunk so that the number of artists and playcounts are equal.The code below also checks to make sure that the program recognizes the input artist names (mostly to help check to make sure artists' names are spelled correctly).  The output is a dataframe of the artist names, their corrosponding play count, and whether or not the artist name was recognized in 3 different subsets: the sample data ("$Recognized.samp.dat"), the list of artists with 100+ unique listeners ("$Recognized.Artist.plays.100"), and the entire Lastfm artist library ("$Recognized.Lastfm").  If an artist is listed as "FALSE" (meaning they weren't recognized) for all 3 subsets, then the artist name is most likely mispelled.  If an artist is recognized by only Lastfm, then the artist didn't have enough unique listeners to be included in the sample.  If the artist is recognized in all subsets but the sample data, this means that the artist has enough unique listeners, but wasn't listened to by any users in the random sample.  You can adjust the set.seed or the number of users in the sample in attempt to collect a sample that includes the unrecognized artist.  For any unrecognized artists, go back to the previous chunk to correct potential spelling errors, or change the set.seed or number of users in the random sample.
+```{r}
+if (length(test.artists) == length(test.plays)) {
+  test.df <- data.frame(artname = test.artists, playcount = test.plays)
+  for(i in c(1:length(test.artists))) {
+    test.df$Recognized.samp.dat[i] <- test.df$artname[i] %in% samp.dat$artname
+    test.df$Recognized.Artist.plays.100[i] <- test.df$artname[i] %in% Artist.plays.100
+    test.df$Recognized.Lastfm[i] <- test.df$artname[i] %in% Lastfm$artname
+  }
+  test.df
+  
+} else {print(paste("length(test.artists) = ", length(test.artists), ", length(test.plays) = ", length(test.plays), ": Lengths must match, adjust test.artists/test.plays in previous chunk", sep = ""))}
+```
+
+We now must turn "test.df" into a utility matrix (of the same dimensions & colnames as "samp.Utility") for the input user.  This matrix will be used as the test data for the recommendation function, outputting a list of recommended artists.  Enter an id (name, initials, etc) for identifying the input user
 ```{r}
 id <- "SAG"
-file.name <- paste("~/Documents/NYU/APSTA 2017/EDSP_v2/Interactive/input_", id,".csv", sep = "")
-input.dat <- read.csv(file.name)[,c(1,2)]
-```
-
-We now must turn "input.dat" into a utility matrix (of the same dimensions & colnames as "samp.Utility") for the input user.  This matrix will be used as the test data for the recommendation function.
-```{r}
 Test.Utility <- matrix(data = NA, nrow = 1,
                        ncol = length(unique(samp.dat$artname)))
 colnames(Test.Utility) <- colnames(samp.Utility)
 
 # Fill in Test.Utility matrix
 rownames(Test.Utility) <- id
-  for (i in 1:nrow(input.dat)) {
-    Test.Utility[which(colnames(Test.Utility) == input.dat$Artist[i])] <- input.dat$Count[i]
+  for (i in 1:nrow(test.df)) {
+    Test.Utility[which(colnames(Test.Utility) == test.df$artname[i])] <- test.df$playcount[i]
   }
 rm(i)
 ```
 
 
-Convert the test and train utility matrices to the form "realRatingMatrix", run recommendation model.  The number of recommendations that are in the output can be modified by setting "N_recs".
+Convert the test and train utility matrices to the form "realRatingMatrix", and train the recommendation model using the utility matrix of the sample users' listening history.
 ```{r}
 Train.Affinity <- as(samp.Utility,"realRatingMatrix")
 Test.Affinity <- as(Test.Utility, "realRatingMatrix")
 Rec.model <- Recommender(data = Train.Affinity, method = "UBCF", param=list(normalize = "Z-score",method="Cosine",nn=10))
 ```
 
+Create a list of recommended artists for the test user using the recommendation model.  The number of recommended artists can be changed through the "N_recs" object.  The output will be the "test.df" from earlier (ordered by playcount) and a list of the recommended artists in order of recommendation.
 ```{r}
 N_recs <- 30
 recommended.items <- predict(Rec.model, Test.Affinity, n = N_recs)
-User.playlist <- input.dat 
 User.recs <- as(recommended.items,"list")
-User.playlist
-data.frame(rnk = c(1:N_recs), User.recs$SAG)
+test.df[order(test.df$playcount, decreasing = T),c(1:3)]
+data.frame(rnk = c(1:N_recs), User.recs[1])
 ```
 
