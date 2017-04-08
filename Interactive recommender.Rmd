@@ -7,47 +7,56 @@ One goal (if not the only goal) of a music recommendation engine is to create a 
 
 This program can be thought of as a "beta test" of sorts.  My goal is to create a survey document that will allow survey-takers to input their musical preferences, from which I can create a recommendation list.
 
-First, let's load appropriate packages and data, and also create code for saving data.
+First, load appropriate packages and data.
 ```{r}
 library(recommenderlab)
 ```
 
 ```{r}
-load("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Lastfm_data.RData")
+load("large data/Lastfm_data.RData")
 ```
 
+The save.image code should only be used if you have created a new training utility matrix through a simulation that is different from the below simulation (i.e. different subset of artists/users, different number of users in matrix).  The process of creating a new utility matrix is quite time inefficient, so saving a created training utility matrix can allow for quick recall of the matrix instead of having to recreate the matrix from scratch.  If you would like to save a different utitlity matrix than the one created through the code below, please rename the file from the file name below, in order to not overwrite my pre-existing data.
 ```{r}
-save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Interactive.RData")
+#save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Interactive.RData")
 ```
 
-As done in "Music Recommendation Simulation_v1.Rmd", let's consider only users who have listend to songs by no fewer than 20 unique artists.
+Examine the 0.05th quantiles of the number of unique artists listened to by users.  This information can be helpful in subsetting users that should be used in the training utility matrix.
 ```{r}
-User.plays.20 <- User.plays[which(User.plays$N.artists >= 20),]
+quantile(User.plays$N.artists, seq(0, 1, .05), na.rm = T)
 ```
 
-Similarly to how we have eliminated users with rather specific musical preference (as inidicated by a low number of unique artists listened to), I think it would be valuable to eliminate artists who have a narrow listener following (as indicated by a low number of unique listeners).  Let's examine the quantiles of Artist.plays$N.users to get a feel the user listening base of many artists.
+User's with a more diverse listening history should allow for better recommendations (less sparsity in utility matrix).  Let's make recommendations off of the listening history of users who are in the top 20% in terms of number of unique artists.  If you would like to allow for a larger or smaller subset of users, feel free to change the minium number of unique artists, but don't save/overwrite the altered script.
 ```{r}
-quantile(Artist.plays$N.users, seq(0, 1, .1))
+User.plays.50 <- User.plays[which(User.plays$N.artists >= 40),]
 ```
 
-As we can see, there are lot of artists who are only listened to by a handful of users.  Only about 1 in 5 artists are listened to by more than a dozen different users (out of more than 300 thousand users).  For the sake of recommending music that isn't super-specific, let's only consider artists who are listened to by no fewer than 10 unique users.
+Similarly to how we have eliminated users with rather specific musical preference (as inidicated by a low number of unique artists listened to), It is valuable to eliminate artists who have a narrow listener following (as indicated by a low number of unique listeners).  Let's examine the 0.05th quantiles of Artist.plays$N.users to get a feel the user listening base of many artists.
 ```{r}
-Artist.plays.10 <- Artist.plays[which(Artist.plays$N.users >= 12),]
+quantile(Artist.plays$N.users, seq(0.9, 1, .01))
 ```
-This cuts down on the size of the recommendable music "library" from more than 200,000 unique artists to fewer than 50,000 unique artists.
 
-Similarly to to "Music Recommendation Simulation_v1.Rmd", we must create a data sample from which to train the recommender.  One modification to this sample is that it should include users who are randomly sampled from "User.plays.20" AND only artists who appear in "Artist.plays.10".
+Let's only consider artists who are in the top 4% by number of unique users (160+ unique listeners, as a arbitrarily round number).  This should cut down on the number of recommendations of niche/specific artists.  This number can be changed moving forward, but for the sake of developing a functional algorithm, let's stick to artists who have a somewhat broad following.  This still allows for close to 10,000 artists, so it's not an overly restrictive library of artists.
 ```{r}
-set.seed(2202017)
+Artist.plays.100 <- Artist.plays[which(Artist.plays$N.users >= 60),]
+```
+
+Similarly to to "Music Recommendation Simulation_v1.Rmd", we must create a data sample from which to train the recommender.  One modification to this sample is that it should include users who are randomly sampled from "User.plays.50" AND only artists who appear in "Artist.plays.10".
+```{r}
+set.seed(04072017)
 N_samp <- 1000
-samp.users <- User.plays.20$User[sample(c(1:length(User.plays.20$User)), N_samp , replace = F)]
-samp.dat <- Lastfm[which(Lastfm$usersha1 %in% samp.users & Lastfm$artname %in% unique(Artist.plays.10$Artist)),]
+samp.users <- User.plays.50$User[sample(c(1:length(User.plays.50$User)), N_samp , replace = F)]
+samp.dat <- Lastfm[which(Lastfm$usersha1 %in% samp.users & Lastfm$artname %in% unique(Artist.plays.100$Artist)),]
 ```
 
-As in "Music Recommendation Simulation_v1", we must create a utility matrix of users' (and the input user's) musical preferences.
+Let's see how many unique artists there are in our sample of N users
 ```{r}
 print(paste("Number of unique artists in a sample of", N_samp,"users:", 
         length(unique(samp.dat$artname))))
+```
+
+As in "Music Recommendation Simulation_v1", we must create a utility matrix of users' musical preferences.  The rows of the matrix are each of the unique users in our sample, the columns are each of the unique artists in our sample.  The values of each cell are the number of listens by user[i] of artist[j].  This matrix is sparse, as users don't listen to most of the different artists, and artists aren't listened to by most of the users.
+```{r}
 samp.Utility <- matrix(data = NA, nrow = length(unique(samp.dat$usersha1)),
                        ncol = length(unique(samp.dat$artname)))
 rownames(samp.Utility) <- unique(samp.dat$usersha1)
