@@ -9,16 +9,19 @@ This program can be thought of as a "beta test" of sorts.  My goal is to create 
 
 First, load appropriate packages and data.
 ```{r}
-library(recommenderlab)
+require(recommenderlab)
 ```
 
 ```{r}
-load("large data/Lastfm_data.RData")
+load("large data/Interactive.RData")
 ```
+
+[[IMPORTANT]]
+If you wish simply to run the recommendation model based on the pre-existing training data/utility matrix that exists in the above file, proceed directly to Line 75.
 
 The save.image code should only be used if you have created a new training utility matrix through a simulation that is different from the below simulation (i.e. different subset of artists/users, different number of users in matrix).  The process of creating a new utility matrix is quite time inefficient, so saving a created training utility matrix can allow for quick recall of the matrix instead of having to recreate the matrix from scratch.  If you would like to save a different utitlity matrix than the one created through the code below, please rename the file from the file name below, in order to not overwrite my pre-existing data.
 ```{r}
-#save.image("~/Documents/NYU/APSTA 2017/EDSP_v2/large data/Interactive.RData")
+#save.image("large data/Interactive.RData")
 ```
 
 Examine the 0.05th quantiles of the number of unique artists listened to by users.  This information can be helpful in subsetting users that should be used in the training utility matrix.
@@ -68,6 +71,8 @@ for (i in 1:nrow(samp.dat)) {
 }
 rm(i)
 ```
+
+[[BEGIN HERE IF USING PRE-EXISTING TRAINING SET/UTILITY MATRIX]]
 
 The goal of this code is to allow users to "interact" with the recommendation algorithm.  That is, allow users to create a "mock" listening history for themselves, and see which artists the algorithm recommends.  In the code below, users can input artists that they like, and assign a hypothetical play count to each artist (the more users like an artist, the more "plays" they should assign to the artist).  In the code chunk below, store the names of the artists that you like in the object "test.artists" and the playcount associated with each artist in "test.plays".  Keep in mind that the order of "test.artists" should correspond to the order of "test.plays".  In the example, the user listens to Michael Jackson 125 times, The Beatles 80 times, and Kanye West 230 times.
 
