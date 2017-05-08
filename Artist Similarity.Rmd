@@ -1,5 +1,5 @@
 ---
-title: "Music Factorization"
+title: "Artist Similarity"
 output: html_notebook
 ---
 
@@ -8,6 +8,7 @@ load("large data/Lastfm_data.RData")
 require(lsa)
 require(psych)
 require(NMF)
+require(VennDiagram)
 ```
 
 Examine the 0.05th quantiles of the number of unique artists listened to by users.  This information can be helpful in subsetting users that should be used in the training utility matrix.
@@ -33,7 +34,7 @@ Artist.plays.100 <- Artist.plays[which(Artist.plays$N.users >= 500),]
 Similarly to to "Music Recommendation Simulation_v1.Rmd", we must create a data sample from which to train the recommender.  One modification to this sample is that it should include users who are randomly sampled from "User.plays.50" AND only artists who appear in "Artist.plays.10".
 ```{r}
 set.seed(04072017)
-N_samp <- 100
+N_samp <- 1000
 samp.users <- User.plays.50$User[sample(c(1:length(User.plays.50$User)), N_samp , replace = F)]
 samp.dat <- Lastfm[which(Lastfm$usersha1 %in% samp.users & Lastfm$artname %in% unique(Artist.plays.100$Artist)),]
 ```
@@ -66,7 +67,7 @@ artist.similarity <- cosine(samp.Utility)
 
 Input an artist name, and generate the top N similar artists (by cosine distance).
 ```{r}
-artist.name <- "kanye west"
+artist.name <- "the beatles"
 N <- 10
 
 similar.artists <- artist.similarity[which(colnames(artist.similarity) == artist.name),]
@@ -76,37 +77,25 @@ similar.artists.df <- data.frame(artist = names(similar.artists), similarity = a
 
 print(paste(sum(samp.Utility[,which(colnames(samp.Utility) == artist.name)]), " different users listen to ", artist.name, sep = ""))
 similar.artists.df
+
 ```
 
+Create venn diagrams of artist
 ```{r}
-eigen<-scree(samp.Utility, factors=FALSE)
-eigen$pcv[which(eigen$pc > 0)]
-```
+venn.df <- matrix(c(samp.Utility[,which(colnames(samp.Utility) == artist.name)], samp.Utility[,which(colnames(samp.Utility) == similar.artists.df$artist[1])], samp.Utility[,which(colnames(samp.Utility) == similar.artists.df$artist[2])]), ncol = 3, byrow = F)
 
-Create correlation matrix of all artists in "samp.Utility"
-```{r}
-corr.mat <- as.matrix(cor(samp.Utility))
-```
+listeners.1 <- max(length(venn.df[which(venn.df[,1] == 1)]), 0)
+listeners.2 <- max(length(venn.df[which(venn.df[,2] == 1)]), 0)
+listeners.3 <- max(length(venn.df[which(venn.df[,3] == 1)]), 0)
+listeners.12 <- max(length(venn.df[which(venn.df[,1] == 1 & venn.df[,2] == 1)]), 0)
+listeners.13 <- max(length(venn.df[which(venn.df[,1] == 1 & venn.df[,3] == 1)]), 0)
+listeners.23 <- max(length(venn.df[which(venn.df[,2] == 1 & venn.df[,3] == 1)]), 0)
+listeners.123 <- max(length(venn.df[which(venn.df[,1] == 1 & venn.df[,2] == 1 & venn.df[,3] == 1)]),0)
 
-```{r}
-fit <- princomp(t(samp.Utility), cor=F)
-#summary(fit) # print variance accounted for 
-#loadings(fit) # pc loadings 
-plot(fit,type="lines") # scree plot 
-#fit$scores # the principal components
-biplot(fit, choices = c(3,4))
-```
+# Venn Diagram
+grid.newpage()
+draw.triple.venn(area1 = listeners.1, area2 = listeners.2, area3 = listeners.3, n12 = listeners.12, n23 = listeners.23, n13 = listeners.13, n123 = listeners.123, category = c(artist.name, as.character(similar.artists.df$artist[1]), as.character(similar.artists.df$artist[2])), lty = "blank", fill = c("skyblue", "pink1", "mediumorchid"), scaled = T)
 
-
-
-
-```{r}
-fit <- factanal(covmat = corr.mat , factors = 3, rotation="varimax")
-print(fit, digits=2, cutoff=.3, sort=TRUE)
-# plot factor 1 by factor 2 
-load <- fit$loadings[,1:2] 
-plot(load,type="n") # set up plot 
-text(load,labels=names(mydata),cex=.7) # add variable names
 
 ```
 
