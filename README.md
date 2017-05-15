@@ -1,16 +1,11 @@
 # edsp17proj-s-gibson
 edsp17proj-s-gibson created by GitHub Classroom
 
-The goal of this project is to create a music recommendation program that recommends music to users based on their past listening history and its similarities to other users' listening history.
+The goal of this project is to create a music recommendation program that recommends music to users based on their past listening history and its similarities to other users' listening history as well as the similarity of artists that a user listens to.
 
-As of now, the recommendation engine is a "user-based collaborative filtering" recommender.  My goal is to implement other recommending techniques and create a "hybrid" recommendation model that relies on multiple input streams to make recommendations.
+I haven't completed a fully functional program that offers recommendations through a combination of user similarity and artist similarity, but I do have working programs that offer "recommendations" separately.  A next step would be to aggregate these recommendation programs into a single algorithm.
 
 Repository organization:
-* Functions: Contains R files with user-defined functions that are to be utilized in the recommendation model.
-* Interactive: Contains a master input file that allows users to create a "hypothetical" listening history in order to test the recommendation engine.  Users can fill out "input_master.csv" with a list of artists they listen to and how many times they might listen to said artists.  Users can then view their recommended artists by running "Interactive recommender.Rmd" and modifying the code to match their input .csv.
-* large-rep: This folder holds the large data files that are used in my repository.  "Lastfm_data.RData" is the base data environment that I use in my repository.  Some of the recommendation programs take awhile to run, so it is sometimes beneficial for me to save program-modified data environments separately for quick loading in the future.
-
-Recent progress:
-Most recently I have written code for scraping artist "tags" from the last.fm API.  I think this will be very useful moving forward as I try to develop a "hybrid" recommendation model.  The UBCF model has provided results that I am optimistic about, but ideally I could curate UBCF recommendations based on tag/genre-based recommendations.
-
-I have updated "Interactive recommender.Rmd", which is the primary Rmarkdown for this repo at the moment.  The functionality of "Interactive recommender.Rmd" for outside users was not very good, but with recent updates, classmates can run the recommendation program on their own musical preferences and receive a list of artist recommendations.
+* large-rep: This folder holds the large data files that are used in my repository.  "Lastfm_data.RData" is the base data environment that I use in my repository.  Some of the recommendation programs take awhile to run, so it is sometimes beneficial for me to save program-modified data environments separately for quick loading in the future.  "Interactive.RData" is used in the "Interactive recommender.Rmd" program, "Artist similarity.RData" is used in the "Artist Similarity.Rmd".
+* Interactive.Rmd: This program is an interactive recommendation program that people viewing this repository can use to generate personal recommendations for themselves by inputting a hypothetical listening history for which to recommend through user-based collaborative filtering.
+* Artist Similarity.Rmd: This program allows people viewing this repository to explore artists similar to their favorite artists through cosine distance similarity.  The program generates a list of the top 10 most similar artists, and also produces a venn diagram visualization of the artist of interest, the artist's top two most similar artists, and the overlap of listeners of the targets artist and the two similar artists.
