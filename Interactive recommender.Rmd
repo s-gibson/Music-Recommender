@@ -13,7 +13,7 @@ require(recommenderlab)
 ```
 
 ```{r}
-load("large data/Interactive.RData")
+load("large-rep/Interactive.RData")
 ```
 
 [[IMPORTANT]]

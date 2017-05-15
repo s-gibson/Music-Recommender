@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 ```{r}
-load("large data/Lastfm_data.RData")
+load("large-rep/Lastfm_data.RData")
 require(lsa)
 require(psych)
 require(NMF)
